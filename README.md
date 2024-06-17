@@ -1,0 +1,2 @@
+# argline
+Go linter
