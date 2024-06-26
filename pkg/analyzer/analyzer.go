@@ -165,7 +165,7 @@ func (s *fargs) reportV2(
 			TextEdits: []analysis.TextEdit{{
 				Pos:     args.StartPos,
 				End:     args.EndPos,
-				NewText: []byte("\n" + buildArgs(pass, args)),
+				NewText: []byte("\n" + buildArgs(args)),
 			}},
 		})
 		pos = args.StartPos
@@ -178,7 +178,7 @@ func (s *fargs) reportV2(
 			TextEdits: []analysis.TextEdit{{
 				Pos:     rArgs.StartPos,
 				End:     rArgs.EndPos,
-				NewText: []byte("\n" + buildArgs(pass, rArgs)),
+				NewText: []byte("\n" + buildArgs(rArgs)),
 			}},
 		})
 		if !pos.IsValid() {
@@ -195,13 +195,14 @@ func (s *fargs) reportV2(
 	})
 }
 
-func buildArgs(pass *analysis.Pass, args *FuncArgs) string {
+func buildArgs(args *FuncArgs) string {
 	var builder strings.Builder
 
 	for _, field := range args.Args {
 		fieldType := typeExprToString(field.Type)
 		for _, arg := range field.Names {
 			builder.WriteString("\t" + arg.Name + " " + fieldType)
+
 			if len(field.Names) > 1 || len(args.Args) > 1 {
 				builder.WriteString(",\n")
 			} else {
