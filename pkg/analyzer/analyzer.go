@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"go/types"
 	"strings"
 
 	"golang.org/x/tools/go/analysis"
@@ -17,18 +18,18 @@ func NewAnalyzer() *analysis.Analyzer {
 	}
 }
 
-type singleLineArgs struct {
+type fargs struct {
 	fset *token.FileSet
 }
 
-type fArgs struct {
-	startPos token.Pos
-	endPos   token.Pos
-	args     []*ast.Field
+type FuncArgs struct {
+	StartPos token.Pos
+	EndPos   token.Pos
+	Args     []*ast.Field
 }
 
 func run(pass *analysis.Pass) (any, error) {
-	sla := &singleLineArgs{fset: pass.Fset}
+	sla := &fargs{fset: pass.Fset}
 
 	for _, file := range pass.Files {
 		ast.Inspect(file, func(n ast.Node) bool {
@@ -43,34 +44,34 @@ func run(pass *analysis.Pass) (any, error) {
 	return nil, nil
 }
 
-func (sla *singleLineArgs) checkFuncArgs(pass *analysis.Pass, fn *ast.FuncDecl) {
+func (s *fargs) checkFuncArgs(pass *analysis.Pass, fn *ast.FuncDecl) {
 	var (
-		args, rArgs *fArgs
+		args, rArgs *FuncArgs
 	)
 
 	if fn.Type.Params == nil || len(fn.Type.Params.List) == 0 {
 		return // No arguments to check
 	}
 
-	if sla.checkFuncDecOneLine(fn) {
+	if s.checkFuncDecOneLine(fn) {
 		return // function declaration in one line
 	}
 
-	args = &fArgs{
-		startPos: fn.Type.Params.Pos() + 1,
-		endPos:   fn.Type.Params.End() - 1,
-		args:     fn.Type.Params.List,
+	args = &FuncArgs{
+		StartPos: fn.Type.Params.Pos() + 1,
+		EndPos:   fn.Type.Params.End() - 1,
+		Args:     fn.Type.Params.List,
 	}
 	if fn.Type.Results != nil {
-		rArgs = &fArgs{
-			startPos: fn.Type.Results.Pos() + 1,
-			endPos:   fn.Type.Results.End() - 1,
-			args:     fn.Type.Results.List,
+		rArgs = &FuncArgs{
+			StartPos: fn.Type.Results.Pos() + 1,
+			EndPos:   fn.Type.Results.End() - 1,
+			Args:     fn.Type.Results.List,
 		}
 	}
 
 	// check and replace args
-	argsValid, rArgsValid := sla.validateFuncArgs(args, rArgs)
+	argsValid, rArgsValid := s.validateFuncArgs(args, rArgs)
 
 	if argsValid {
 		args = nil
@@ -80,16 +81,16 @@ func (sla *singleLineArgs) checkFuncArgs(pass *analysis.Pass, fn *ast.FuncDecl) 
 		rArgs = nil
 	}
 
-	sla.reportMultiLineArg(pass, fn.Name.String(), args, rArgs)
+	s.reportMultiLineArg(pass, fn.Name.String(), args, rArgs)
 
 	return
 }
 
-func (sla *singleLineArgs) checkFuncDecOneLine(fn *ast.FuncDecl) bool {
-	bodyStartPos := sla.fset.Position(fn.Body.Pos())
-	fnStartPos := sla.fset.Position(fn.Type.Pos())
+func (s *fargs) checkFuncDecOneLine(fn *ast.FuncDecl) bool {
+	bodyStartPos := s.fset.Position(fn.Body.Pos())
+	fnStartPos := s.fset.Position(fn.Type.Pos())
 
-	// TODO add extra check if need: bodyStartPos.Column < 120
+	// TODO add extra check: bodyStartPos.Column < 120
 	if fnStartPos.Line == bodyStartPos.Line {
 		return true // function declaration in one line
 	}
@@ -97,28 +98,28 @@ func (sla *singleLineArgs) checkFuncDecOneLine(fn *ast.FuncDecl) bool {
 	return false
 }
 
-func (sla *singleLineArgs) validateFuncArgs(args *fArgs, rArgs *fArgs) (argsValid, rArgsValid bool) {
+func (s *fargs) validateFuncArgs(args *FuncArgs, rArgs *FuncArgs) (argsValid, rArgsValid bool) {
 	argsValid, rArgsValid = true, true
 
-	if args != nil && len(args.args) > 1 && !sla.validateFuncEachArgs(args) {
+	if args != nil && len(args.Args) > 0 && !s.validateFuncEachArgs(args) {
 		argsValid = false
 	}
 
-	if rArgs != nil && len(rArgs.args) > 1 && !sla.validateFuncEachArgs(rArgs) {
+	if rArgs != nil && len(rArgs.Args) > 0 && !s.validateFuncEachArgs(rArgs) {
 		rArgsValid = false
 	}
 
 	return argsValid, rArgsValid
 }
 
-func (sla *singleLineArgs) validateFuncEachArgs(args *fArgs) bool {
+func (s *fargs) validateFuncEachArgs(args *FuncArgs) bool {
 	// prevPos start from "("
-	// endPos end on ")"
-	prevPos := sla.fset.Position(args.startPos)
+	// EndPos end on ")"
+	prevPos := s.fset.Position(args.StartPos)
 
 	// iterate on each arg and check positions
-	for _, arg := range args.args {
-		argPos := sla.fset.Position(arg.Pos())
+	for _, arg := range args.Args {
+		argPos := s.fset.Position(arg.Pos())
 		if prevPos.Line == argPos.Line {
 			return false
 		}
@@ -127,32 +128,32 @@ func (sla *singleLineArgs) validateFuncEachArgs(args *fArgs) bool {
 	}
 
 	// extra check for last arg
-	if sla.fset.Position(args.args[len(args.args)-1].Pos()).Line == sla.fset.Position(args.endPos).Line {
+	if s.fset.Position(args.Args[len(args.Args)-1].Pos()).Line == s.fset.Position(args.EndPos).Line {
 		return false
 	}
 
 	return true
 }
 
-func (sla *singleLineArgs) reportMultiLineArg(
+func (s *fargs) reportMultiLineArg(
 	pass *analysis.Pass,
 	fnName string,
-	args *fArgs,
-	rArgs *fArgs,
+	args *FuncArgs,
+	rArgs *FuncArgs,
 ) {
 	if args == nil && rArgs == nil {
 		return
 	}
 
 	msg := fmt.Sprintf(`the arguments of the function "%s" should start on a new line`, fnName)
-	sla.reportV2(pass, msg, args, rArgs)
+	s.reportV2(pass, msg, args, rArgs)
 }
 
-func (sla *singleLineArgs) reportV2(
+func (s *fargs) reportV2(
 	pass *analysis.Pass,
 	msg string,
-	args *fArgs,
-	rArgs *fArgs,
+	args *FuncArgs,
+	rArgs *FuncArgs,
 ) {
 	var pos, end token.Pos
 
@@ -162,28 +163,28 @@ func (sla *singleLineArgs) reportV2(
 		suggestedFixes = append(suggestedFixes, analysis.SuggestedFix{
 			Message: msg,
 			TextEdits: []analysis.TextEdit{{
-				Pos:     args.startPos,
-				End:     args.endPos,
+				Pos:     args.StartPos,
+				End:     args.EndPos,
 				NewText: []byte("\n" + buildArgs(pass, args)),
 			}},
 		})
-		pos = args.startPos
-		end = args.endPos
+		pos = args.StartPos
+		end = args.EndPos
 	}
 
 	if rArgs != nil {
 		suggestedFixes = append(suggestedFixes, analysis.SuggestedFix{
 			Message: msg,
 			TextEdits: []analysis.TextEdit{{
-				Pos:     rArgs.startPos,
-				End:     rArgs.endPos,
+				Pos:     rArgs.StartPos,
+				End:     rArgs.EndPos,
 				NewText: []byte("\n" + buildArgs(pass, rArgs)),
 			}},
 		})
 		if !pos.IsValid() {
-			pos = rArgs.startPos
+			pos = rArgs.StartPos
 		}
-		end = rArgs.endPos
+		end = rArgs.EndPos
 	}
 
 	pass.Report(analysis.Diagnostic{
@@ -194,14 +195,24 @@ func (sla *singleLineArgs) reportV2(
 	})
 }
 
-func buildArgs(pass *analysis.Pass, args *fArgs) string {
-	argsSlice := make([]string, 0, len(args.args))
-	for _, field := range args.args {
-		astFieldType := pass.TypesInfo.TypeOf(field.Type)
+func buildArgs(pass *analysis.Pass, args *FuncArgs) string {
+	var builder strings.Builder
+
+	for _, field := range args.Args {
+		fieldType := typeExprToString(field.Type)
 		for _, arg := range field.Names {
-			argsSlice = append(argsSlice, "\t"+arg.Name+" "+astFieldType.String()+",\n")
+			builder.WriteString("\t" + arg.Name + " " + fieldType)
+			if len(field.Names) > 1 || len(args.Args) > 1 {
+				builder.WriteString(",\n")
+			} else {
+				builder.WriteString("\n")
+			}
 		}
 	}
 
-	return strings.Join(argsSlice, "")
+	return builder.String()
+}
+
+func typeExprToString(argType ast.Expr) string {
+	return types.ExprString(argType)
 }

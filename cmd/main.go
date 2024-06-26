@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/artemk1337/argline/pkg/analyzer"
+	"github.com/artemk1337/fargs/pkg/analyzer"
 	"golang.org/x/tools/go/analysis/singlechecker"
 )
 
