@@ -17,7 +17,7 @@ This helps maintain consistent and readable code formatting in Go projects.
 ### Instalation
 
 ```shell
-go get github.com/artemk1337/fparams/cmd/main
+go get github.com/artemk1337/fparams/cmd/fparams
 ```
 
 ### Usage
@@ -30,15 +30,58 @@ Parameters:
 - `-disableCheckFuncParams` - disable check function params
 - `-disableCheckFuncReturns` - disable check function returns
 
+### Configuration
 
-## Tests
+You can configure fparams using command-line flags to enable or disable specific checks:
+- `-disableCheckFuncParams` - disable check function params
+- `-disableCheckFuncReturns` - disable check function returns
 
----
+### Example
+
+Given a function declaration like this:
+```go
+func example(a int, b int, 
+    c, d string) (int, error) {
+    return 0, nil
+}
+```
+
+fparams will suggest changing it to:
+```go
+func example(
+    a int,
+    b int,
+    c string,
+    d string,
+) (
+    int,
+    error,
+) {
+    return 0, nil
+}
+```
+
+More valid and invalid examples see in [testdata](pkg%2Fanalyzer%2Ftestdata) directory.
+
+### Tests
 
 Run command to start test:
 ```shell
 go test ./pkg/analyzer/...
 ```
 
-## Integrations
-- golangci-lint
+[//]: # (### Integrations)
+[//]: # (- golangci-lint)
+
+### Contribution
+
+Contributions are welcome! 
+Please fork the repository and submit a pull request.
+
+### License
+
+This project is licensed under the MIT License. 
+See the [LICENSE](LICENSE) file for details.
+
+By using fparams, you can ensure that your Go codebase remains clean and consistently formatted, 
+making it easier to read and maintain.
