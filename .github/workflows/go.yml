@@ -4,44 +4,41 @@ on:
   push:
     branches: [ master ]
   pull_request:
+    branches: [ master ]
 
-  jobs:
+jobs:
+  golangci-lint:
+    runs-on: ubuntu-latest
 
-    golangci-lint:
-      runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.36
 
-      steps:
-        - uses: actions/checkout@v2
-        - name: golangci-lint
-          uses: golangci/golangci-lint-action@v2
-          with:
-            version: v1.36
+  build:
+    name: Build
+    runs-on: ubuntu-latest
 
-    build:
-      name: Build
-      runs-on: ubuntu-latest
-      steps:
+    steps:
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: '^1.13'
+        id: go
 
-        - name: Set up Go 1.x
-          uses: actions/setup-go@v2
-          with:
-            go-version: ^1.13
-          id: go
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
 
-        - name: Check out code into the Go module directory
-          uses: actions/checkout@v2
+      - name: Run Unit tests
+        run: |
+          go test -race -covermode atomic -coverprofile=covprofile ./...
 
-        - name: Run Unit tests
-          run: |
-            go test -race -covermode atomic -coverprofile=covprofile ./...
-        - name: Install goveralls
-          env:
-            GO111MODULE: off
-          run: go get github.com/mattn/goveralls
-        - name: Send coverage
-          env:
-            COVERALLS_TOKEN: ${{ secrets.github_token }}
-          run: goveralls -coverprofile=covprofile -service=github
+      - name: Install goveralls
+        env:
+          GO111MODULE: 'off'
+        run: go get github.com/mattn/goveralls
 
-        - name: Check it's own cyclomatic complexity
-          run: go run ./cmd/fparams/ ./pkg/analyzer/
+      - name: Checks the formatting of function parameters and return values
+        run: go run ./cmd/fparams/ ./pkg/analyzer/
