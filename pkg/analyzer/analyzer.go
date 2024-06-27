@@ -10,6 +10,12 @@ import (
 	"strings"
 )
 
+const (
+	errMsgTotal   = `the parameters and returns values of the function "%s" should be on separate lines`
+	errMsgParams  = `the parameters of the function "%s" should be on separate lines`
+	errMsgReturns = `the return values of the function "%s" should be on separate lines`
+)
+
 //nolint:gochecknoglobals
 var flagSet flag.FlagSet
 
@@ -37,7 +43,8 @@ type fparams struct {
 	fset *token.FileSet
 }
 
-type FuncParams struct {
+// Params - extra model to store params and start/end position
+type Params struct {
 	StartPos token.Pos
 	EndPos   token.Pos
 	Fields   []*ast.Field
@@ -61,7 +68,7 @@ func run(pass *analysis.Pass) (any, error) {
 
 func (s *fparams) checkFuncArgs(pass *analysis.Pass, fn *ast.FuncDecl) {
 	var (
-		params, returns *FuncParams
+		params, returns *Params
 	)
 
 	if (fn.Type.Params == nil || len(fn.Type.Params.List) == 0) &&
@@ -75,7 +82,7 @@ func (s *fparams) checkFuncArgs(pass *analysis.Pass, fn *ast.FuncDecl) {
 
 	// check exists params, flag and create input params struct
 	if fn.Type.Params != nil && !disableCheckFuncParams {
-		params = &FuncParams{
+		params = &Params{
 			StartPos: fn.Type.Params.Pos() + 1,
 			EndPos:   fn.Type.Params.End() - 1,
 			Fields:   fn.Type.Params.List,
@@ -83,7 +90,7 @@ func (s *fparams) checkFuncArgs(pass *analysis.Pass, fn *ast.FuncDecl) {
 	}
 	// check exists results, flag and create return params struct
 	if fn.Type.Results != nil && !disableCheckFuncReturns {
-		returns = &FuncParams{
+		returns = &Params{
 			StartPos: fn.Type.Results.Pos() + 1,
 			EndPos:   fn.Type.Results.End() - 1,
 			Fields:   fn.Type.Results.List,
@@ -118,7 +125,7 @@ func (s *fparams) checkFuncInOneLine(fn *ast.FuncDecl) bool {
 	return false
 }
 
-func (s *fparams) validateFuncParams(params *FuncParams, returns *FuncParams) (paramsValid, returnsValid bool) {
+func (s *fparams) validateFuncParams(params *Params, returns *Params) (paramsValid, returnsValid bool) {
 	paramsValid, returnsValid = true, true
 
 	if params != nil && len(params.Fields) > 0 && !s.validateFuncEachParam(params) {
@@ -132,9 +139,8 @@ func (s *fparams) validateFuncParams(params *FuncParams, returns *FuncParams) (p
 	return paramsValid, returnsValid
 }
 
-func (s *fparams) validateFuncEachParam(params *FuncParams) bool {
-	// prevPos start from "("
-	// EndPos end on ")"
+func (s *fparams) validateFuncEachParam(params *Params) bool {
+	// prevPos starts from "("
 	prevPos := s.fset.Position(params.StartPos)
 
 	// iterate on each param and check positions
@@ -150,6 +156,7 @@ func (s *fparams) validateFuncEachParam(params *FuncParams) bool {
 	}
 
 	// extra check for last arg
+	// EndPos ends on ")"
 	if s.fset.Position(params.Fields[len(params.Fields)-1].Pos()).Line == s.fset.Position(params.EndPos).Line {
 		return false
 	}
@@ -160,52 +167,65 @@ func (s *fparams) validateFuncEachParam(params *FuncParams) bool {
 func (s *fparams) reportMultiLineParams(
 	pass *analysis.Pass,
 	fnName string,
-	params *FuncParams,
-	returns *FuncParams,
+	params *Params,
+	returns *Params,
 ) {
-	if params == nil && returns == nil {
+	var errMsg string
+
+	switch {
+	case params != nil && returns != nil: // params and return values exists
+		errMsg = fmt.Sprintf(errMsgTotal, fnName)
+	case params != nil: // only params
+		errMsg = fmt.Sprintf(errMsgParams, fnName)
+	case returns != nil: // only return values
+		errMsg = fmt.Sprintf(errMsgReturns, fnName)
+	default:
 		return
 	}
 
-	msg := fmt.Sprintf(`the parameters and returns of the function "%s" should start on a new line`, fnName)
-	s.reportV2(pass, msg, params, returns)
+	s.reportAndSuggest(pass, errMsg, params, returns)
 }
 
-func (s *fparams) reportV2(
+func (s *fparams) reportAndSuggest(
 	pass *analysis.Pass,
 	msg string,
-	params *FuncParams,
-	returns *FuncParams,
+	params *Params,
+	returns *Params,
 ) {
 	var pos, end token.Pos
 
 	suggestedFixes := make([]analysis.SuggestedFix, 0, 2)
 
+	// create params suggestion
 	if params != nil {
 		suggestedFixes = append(suggestedFixes, analysis.SuggestedFix{
 			Message: msg,
 			TextEdits: []analysis.TextEdit{{
 				Pos:     params.StartPos,
 				End:     params.EndPos,
-				NewText: []byte("\n" + buildArgs(params)),
+				NewText: []byte("\n" + buildParamsString(params)),
 			}},
 		})
+		// set pos and end
 		pos = params.StartPos
 		end = params.EndPos
 	}
 
+	// create return values suggestion
 	if returns != nil {
 		suggestedFixes = append(suggestedFixes, analysis.SuggestedFix{
 			Message: msg,
 			TextEdits: []analysis.TextEdit{{
 				Pos:     returns.StartPos,
 				End:     returns.EndPos,
-				NewText: []byte("\n" + buildArgs(returns)),
+				NewText: []byte("\n" + buildParamsString(returns)),
 			}},
 		})
+		// set pos if not set before
 		if !pos.IsValid() {
 			pos = returns.StartPos
 		}
+		// rewrite end
 		end = returns.EndPos
 	}
 
@@ -217,7 +237,7 @@ func (s *fparams) reportV2(
 	})
 }
 
-func buildArgs(params *FuncParams) string {
+func buildParamsString(params *Params) string {
 	var builder strings.Builder
 
 	for _, field := range params.Fields {
