@@ -21,3 +21,15 @@ func invalidResultsFuncD() ( // want "the parameters and returns of the function
 	c error) {
 	return false, false, nil
 }
+
+func invalidResultsFuncE() (bool, bool, // want "the parameters and returns of the function \"invalidResultsFuncE\" should start on a new line"
+	error) {
+	return false, false, nil
+}
+
+func invalidResultsFuncF() ( // want "the parameters and returns of the function \"invalidResultsFuncF\" should start on a new line"
+	bool,
+	bool,
+	error) {
+	return false, false, nil
+}
