@@ -6,8 +6,9 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
-	"golang.org/x/tools/go/analysis"
 	"strings"
+
+	"golang.org/x/tools/go/analysis"
 )
 
 const (
@@ -43,14 +44,14 @@ type fparams struct {
 	fset *token.FileSet
 }
 
-// Params - extra model to store params and start/end position
+// Params - extra model to store params and start/end position.
 type Params struct {
 	StartPos token.Pos
 	EndPos   token.Pos
 	Fields   []*ast.Field
 }
 
-func run(pass *analysis.Pass) (any, error) {
+func run(pass *analysis.Pass) (interface{}, error) {
 	sla := &fparams{fset: pass.Fset}
 
 	for _, file := range pass.Files {
@@ -67,9 +68,7 @@ func run(pass *analysis.Pass) (any, error) {
 }
 
 func (s *fparams) checkFuncArgs(pass *analysis.Pass, fn *ast.FuncDecl) {
-	var (
-		params, returns *Params
-	)
+	var params, returns *Params
 
 	if (fn.Type.Params == nil || len(fn.Type.Params.List) == 0) &&
 		(fn.Type.Results == nil || len(fn.Type.Results.List) == 0) {
@@ -109,8 +108,6 @@ func (s *fparams) checkFuncArgs(pass *analysis.Pass, fn *ast.FuncDecl) {
 	}
 
 	s.reportMultiLineParams(pass, fn.Name.String(), params, returns)
-
-	return
 }
 
 func (s *fparams) checkFuncInOneLine(fn *ast.FuncDecl) bool {
@@ -118,11 +115,7 @@ func (s *fparams) checkFuncInOneLine(fn *ast.FuncDecl) bool {
 	fnStartPos := s.fset.Position(fn.Type.Pos())
 
 	// TODO add extra check: bodyStartPos.Column < 120
-	if fnStartPos.Line == bodyStartPos.Line {
-		return true // function declaration in one line
-	}
-
-	return false
+	return fnStartPos.Line == bodyStartPos.Line
 }
 
 func (s *fparams) validateFuncParams(params *Params, returns *Params) (paramsValid, returnsValid bool) {
@@ -157,11 +150,7 @@ func (s *fparams) validateFuncEachParam(params *Params) bool {
 
 	// extra check for last arg
 	// EndPos ends on ")"
-	if s.fset.Position(params.Fields[len(params.Fields)-1].Pos()).Line == s.fset.Position(params.EndPos).Line {
-		return false
-	}
-
-	return true
+	return s.fset.Position(params.Fields[len(params.Fields)-1].Pos()).Line != s.fset.Position(params.EndPos).Line
 }
 
 func (s *fparams) reportMultiLineParams(
@@ -194,7 +183,8 @@ func (s *fparams) reportAndSuggest(
 ) {
 	var pos, end token.Pos
 
-	suggestedFixes := make([]analysis.SuggestedFix, 0, 2)
+	// max size - 2; params and return values suggestion
+	suggestedFixes := make([]analysis.SuggestedFix, 0, 2) //nolint:mnd
 
 	// create params suggestion
 	if params != nil {

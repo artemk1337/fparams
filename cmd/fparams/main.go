@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/artemk1337/fparams/pkg/analyzer"
 	"golang.org/x/tools/go/analysis/singlechecker"
+
+	"github.com/artemk1337/fparams/pkg/analyzer"
 )
 
 func main() {

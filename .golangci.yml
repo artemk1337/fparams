@@ -1,0 +1,81 @@
+output:
+  sort-results: true
+  sort-order:
+    - file
+    - linter
+
+linters:
+  # see https://golangci-lint.run/usage/linters/#enabled-by-default
+#  enable:
+#    - asciicheck
+#    - bidichk
+#    - bodyclose
+#    - contextcheck
+#    - decorder
+#    - dupl
+#    - dupword
+#    - errchkjson
+#    - errname
+#    - errorlint
+#    - fatcontext
+#    - forcetypeassert
+#    - gci
+#    - gochecknoglobals
+#    - goconst
+#    - gocritic
+#    - gocyclo
+#    - gofmt
+#    - gosec
+#    - loggercheck
+#    - makezero
+#    - mirror
+#    - misspell
+#    - nilerr
+#    - nlreturn # Nlreturn checks for a new line before return and branch statements to increase code clarity.
+#    - noctx # Finds sending http request without context.Context.
+#    - nolintlint # Reports ill-formed or insufficient nolint directives.
+#    - perfsprint # Checks that fmt.Sprintf can be replaced with a faster alternative.
+#    - prealloc # Finds slice declarations that could potentially be pre-allocated.
+#    - predeclared # Find code that shadows one of Go's predeclared identifiers.
+#    - promlinter # Check Prometheus metrics naming via promlint.
+#    - protogetter # Reports direct reads from proto message fields when getters should be used.
+#    - reassign # Checks that package variables are not reassigned.
+#    - sloglint # slog
+#    - spancheck # Checks for mistakes with OpenTelemetry/Census spans.
+#    - stylecheck # Stylecheck is a replacement for golint.
+#    - tagalign # Check that struct tags are well aligned.
+#    - unconvert # Remove unnecessary type conversions.
+#    - unparam # Reports unused function parameters.
+#    - usestdlibvars # A linter that detect the possibility to use variables/constants from the Go standard library.
+#    - whitespace # Whitespace is a linter that checks for unnecessary newlines at the start and end of functions, if, for, etc.
+#    - wrapcheck # Checks that errors returned from external packages are wrapped.
+#    - wsl # Add or remove empty lines.
+
+  enable-all: true
+  disable:
+    - execinquer
+    - gomnd
+    - depguard
+    - exhaustruct
+    - decorder
+    - nilnil
+    - cyclop
+    - varnamelen
+    - godox
+    - nonamedreturns
+    - testpackage
+    - paralleltest
+#    - varnamelen
+#    - funlen
+#    - gomoddirectives
+#    - revive
+#    - stylecheck
+linters-settings:
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/artemk1337/fparams)
+issues:
+  exclude-dirs:
+    - pkg/analyzer/testdata
