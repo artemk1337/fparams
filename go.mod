@@ -1,6 +1,6 @@
 module github.com/artemk1337/fparams
 
-go 1.22.4
+go 1.22
 
 require golang.org/x/tools v0.22.0
 
