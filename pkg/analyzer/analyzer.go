@@ -24,14 +24,12 @@ var flagSet flag.FlagSet
 var (
 	disableCheckFuncParams  bool
 	disableCheckFuncReturns bool
-	//maxLineLength           int
 )
 
 //nolint:gochecknoinits
 func init() {
 	flagSet.BoolVar(&disableCheckFuncParams, "disableCheckFuncParams", false, "disable check function params")
 	flagSet.BoolVar(&disableCheckFuncReturns, "disableCheckFuncReturns", false, "disable check function returns")
-	//flagSet.IntVar(&maxLineLength, "maxLineLength", 0, "maximum line length with function declaration")
 }
 
 func NewAnalyzer() *analysis.Analyzer {
