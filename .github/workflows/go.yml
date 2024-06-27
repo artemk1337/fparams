@@ -29,7 +29,7 @@ jobs:
           go-version: '1.20'
 
       - name: Build
-        run: go build -v ./...
+        run: go build -v ./cmd/fparams
 
       - name: Test
         run: make test
