@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	errMsgTotal   = `the parameters and returns values of the function "%s" should be on separate lines`
+	errMsgTotal   = `the parameters and return values of the function "%s" should be on separate lines`
 	errMsgParams  = `the parameters of the function "%s" should be on separate lines`
 	errMsgReturns = `the return values of the function "%s" should be on separate lines`
 )
