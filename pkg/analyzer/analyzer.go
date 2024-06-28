@@ -249,13 +249,11 @@ func buildParamsString(params *Params) string {
 
 	for _, field := range params.Fields {
 		fieldType := typeExprToString(field.Type)
-		for _, arg := range field.Names {
-			builder.WriteString("\t" + arg.Name + " " + fieldType)
-
-			if len(field.Names) > 1 || len(params.Fields) > 1 {
-				builder.WriteString(",\n")
-			} else {
-				builder.WriteString("\n")
+		if field.Names == nil {
+			builder.WriteString("\t" + fieldType + ",\n")
+		} else {
+			for _, arg := range field.Names {
+				builder.WriteString("\t" + arg.Name + " " + fieldType + ",\n")
 			}
 		}
 	}
