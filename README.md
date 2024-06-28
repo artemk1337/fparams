@@ -16,7 +16,7 @@ This helps maintain consistent and readable code formatting in Go projects.
 ### Instalation
 
 ```shell
-go install github.com/artemk1337/fparams/cmd/fparams
+go install github.com/artemk1337/fparams/cmd/fparams@latest
 ```
 
 ### Usage
@@ -24,10 +24,6 @@ go install github.com/artemk1337/fparams/cmd/fparams
 ```shell
 fparams ./...
 ```
-
-Parameters:
-- `-disableCheckFuncParams` - disable check function params
-- `-disableCheckFuncReturns` - disable check function returns
 
 ### Configuration
 

@@ -74,8 +74,6 @@ func (s *fparams) checkFuncArgs(
 	disableCheckFuncParams,
 	disableCheckFuncReturns bool,
 ) {
-	var params, returns *Params
-
 	if (fn.Type.Params == nil || len(fn.Type.Params.List) == 0) &&
 		(fn.Type.Results == nil || len(fn.Type.Results.List) == 0) {
 		return // No arguments to check
@@ -86,21 +84,7 @@ func (s *fparams) checkFuncArgs(
 	}
 
 	// check exists params, flag and create input params struct
-	if fn.Type.Params != nil && !disableCheckFuncParams {
-		params = &Params{
-			StartPos: fn.Type.Params.Pos() + 1,
-			EndPos:   fn.Type.Params.End() - 1,
-			Fields:   fn.Type.Params.List,
-		}
-	}
-	// check exists results, flag and create return params struct
-	if fn.Type.Results != nil && !disableCheckFuncReturns {
-		returns = &Params{
-			StartPos: fn.Type.Results.Pos() + 1,
-			EndPos:   fn.Type.Results.End() - 1,
-			Fields:   fn.Type.Results.List,
-		}
-	}
+	params, returns := createParamsAndReturns(fn, disableCheckFuncParams, disableCheckFuncReturns)
 
 	// check and replace params
 	paramsValid, returnsValid := s.validateFuncParams(params, returns)
@@ -116,11 +100,38 @@ func (s *fparams) checkFuncArgs(
 	s.reportMultiLineParams(pass, fn.Name.String(), params, returns)
 }
 
+func createParamsAndReturns(
+	fn *ast.FuncDecl,
+	disableCheckFuncParams,
+	disableCheckFuncReturns bool,
+) (
+	params *Params,
+	returns *Params,
+) {
+	// check exists params, flag and create input params struct
+	if fn.Type.Params != nil && !disableCheckFuncParams {
+		params = &Params{
+			StartPos: fn.Type.Params.Pos() + 1,
+			EndPos:   fn.Type.Params.End() - 1,
+			Fields:   fn.Type.Params.List,
+		}
+	}
+	// check exists returns, flag and create return params struct
+	if fn.Type.Results != nil && !disableCheckFuncReturns {
+		returns = &Params{
+			StartPos: fn.Type.Results.Pos() + 1,
+			EndPos:   fn.Type.Results.End() - 1,
+			Fields:   fn.Type.Results.List,
+		}
+	}
+
+	return params, returns
+}
+
 func (s *fparams) checkFuncInOneLine(fn *ast.FuncDecl) bool {
 	bodyStartPos := s.fset.Position(fn.Body.Pos())
 	fnStartPos := s.fset.Position(fn.Type.Pos())
 
-	// TODO add extra check: bodyStartPos.Column < 120
 	return fnStartPos.Line == bodyStartPos.Line
 }
 
