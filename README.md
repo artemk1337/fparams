@@ -16,13 +16,13 @@ This helps maintain consistent and readable code formatting in Go projects.
 ### Instalation
 
 ```shell
-go get github.com/artemk1337/fparams/cmd/fparams
+go install github.com/artemk1337/fparams/cmd/fparams
 ```
 
 ### Usage
 
 ```shell
-
+fparams ./...
 ```
 
 Parameters:

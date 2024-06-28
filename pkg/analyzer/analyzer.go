@@ -34,9 +34,10 @@ func init() {
 
 func NewAnalyzer() *analysis.Analyzer {
 	return &analysis.Analyzer{
-		Name: "fparams",
-		Doc:  "checks if function params and returns are all on one line or each on a new line",
-		Run:  run,
+		Name:  "fparams",
+		Doc:   "checks if function params and returns are all on one line or each on a new line",
+		Run:   run,
+		Flags: flagSet,
 	}
 }
 
