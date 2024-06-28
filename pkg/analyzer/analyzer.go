@@ -17,26 +17,24 @@ const (
 	errMsgReturns = `the return values of the function "%s" should be on separate lines`
 )
 
-//nolint:gochecknoglobals
-var flagSet flag.FlagSet
-
-//nolint:gochecknoglobals
-var (
+type config struct {
 	disableCheckFuncParams  bool
 	disableCheckFuncReturns bool
-)
-
-//nolint:gochecknoinits
-func init() {
-	flagSet.BoolVar(&disableCheckFuncParams, "disableCheckFuncParams", false, "disable check function params")
-	flagSet.BoolVar(&disableCheckFuncReturns, "disableCheckFuncReturns", false, "disable check function returns")
 }
 
 func NewAnalyzer() *analysis.Analyzer {
+	var (
+		flagSet flag.FlagSet
+		cfg     config
+	)
+
+	flagSet.BoolVar(&cfg.disableCheckFuncParams, "disableCheckFuncParams", false, "disable check function params")
+	flagSet.BoolVar(&cfg.disableCheckFuncReturns, "disableCheckFuncReturns", false, "disable check function returns")
+
 	return &analysis.Analyzer{
 		Name:  "fparams",
 		Doc:   "checks if function params and returns are all on one line or each on a new line",
-		Run:   run,
+		Run:   run(&cfg),
 		Flags: flagSet,
 	}
 }
@@ -52,23 +50,30 @@ type Params struct {
 	Fields   []*ast.Field
 }
 
-func run(pass *analysis.Pass) (interface{}, error) {
-	sla := &fparams{fset: pass.Fset}
+func run(cfg *config) func(pass *analysis.Pass) (interface{}, error) {
+	return func(pass *analysis.Pass) (interface{}, error) {
+		sla := &fparams{fset: pass.Fset}
 
-	for _, file := range pass.Files {
-		ast.Inspect(file, func(n ast.Node) bool {
-			if fn, ok := n.(*ast.FuncDecl); ok {
-				sla.checkFuncArgs(pass, fn)
-			}
+		for _, file := range pass.Files {
+			ast.Inspect(file, func(n ast.Node) bool {
+				if fn, ok := n.(*ast.FuncDecl); ok {
+					sla.checkFuncArgs(pass, fn, cfg.disableCheckFuncParams, cfg.disableCheckFuncReturns)
+				}
 
-			return true
-		})
+				return true
+			})
+		}
+
+		return nil, nil
 	}
-
-	return nil, nil
 }
 
-func (s *fparams) checkFuncArgs(pass *analysis.Pass, fn *ast.FuncDecl) {
+func (s *fparams) checkFuncArgs(
+	pass *analysis.Pass,
+	fn *ast.FuncDecl,
+	disableCheckFuncParams,
+	disableCheckFuncReturns bool,
+) {
 	var params, returns *Params
 
 	if (fn.Type.Params == nil || len(fn.Type.Params.List) == 0) &&

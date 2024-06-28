@@ -64,6 +64,7 @@ linters:
     - nonamedreturns
     - testpackage
     - paralleltest
+    - execinquery
 #    - varnamelen
 #    - funlen
 #    - gomoddirectives
